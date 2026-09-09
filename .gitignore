@@ -34,3 +34,4 @@ datasets/**/*.csv
 datasets/**/*.xlsx
 datasets/**/*.pdf
 !datasets/**/.gitkeep
+*:Zone.Identifier
