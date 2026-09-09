@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# uv
+.uv/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Docker
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Data (sintética pero pesada, no versionar binarios grandes)
+datasets/**/*.csv
+datasets/**/*.xlsx
+datasets/**/*.pdf
+!datasets/**/.gitkeep
