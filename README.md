@@ -1,46 +1,46 @@
 # AI Solution Architect Portfolio
 
-Plataforma de IA empresarial construida de forma incremental como proyecto
-de aprendizaje y portafolio profesional, usando exclusivamente tecnologías
-open source y datos sintéticos.
+An enterprise-grade AI platform built incrementally as a learning journey
+and professional portfolio, using exclusively open-source technologies
+and synthetic data.
 
-## Filosofía
+## Philosophy
 
-- **Open Source First**: se prioriza software autoalojable sobre servicios
-  cloud propietarios.
-- **Learn by Building**: cada concepto aprendido de un libro técnico se
-  traduce en una implementación real dentro de la plataforma.
-- **Architecture Before Code**: cada feature significativa se diseña
-  (problema, requisitos, diagrama, ADR) antes de implementarse.
-- **Documentation as Code**: la documentación es un entregable, no un
-  extra.
+- **Open Source First**: self-hostable software is prioritized over
+  proprietary cloud services.
+- **Learn by Building**: every concept learned from a technical book is
+  translated into a real implementation within the platform.
+- **Architecture Before Code**: every significant feature is designed
+  (problem statement, requirements, diagram, ADR) before implementation.
+- **Documentation as Code**: documentation is a deliverable, not an
+  afterthought.
 
-## Estado actual
+## Current status
 
-🚧 Fase 1 en progreso — ver [docs/architecture/adr](docs/architecture/adr)
-para las decisiones de arquitectura tomadas hasta ahora.
+🚧 Phase 1 in progress — see [docs/architecture/adr](docs/architecture/adr)
+for the architecture decisions made so far.
 
-## Estructura del repositorio
+## Repository structure
 
 ```
 .
-├── docs/               # Documentación de arquitectura, ADRs, diagramas
-├── datasets/           # Datos sintéticos (nunca información real/confidencial)
-├── backend/            # Servicios backend (FastAPI, pipelines, etc.)
-├── frontend/           # Interfaces de usuario (cuando aplique)
-├── infrastructure/     # Docker Compose, IaC, configuración de despliegue
-├── notebooks/          # Exploración y prototipado en Jupyter
-├── experiments/        # Pruebas de concepto que no llegan a producción
-├── tests/              # Pruebas automatizadas
-└── books/              # Notas y resúmenes de los libros técnicos usados
+├── docs/               # Architecture documentation, ADRs, diagrams
+├── datasets/           # Synthetic data (never real/confidential information)
+├── backend/            # Backend services (FastAPI, pipelines, etc.)
+├── frontend/           # User interfaces (when applicable)
+├── infrastructure/     # Docker Compose, IaC, deployment configuration
+├── notebooks/          # Exploration and prototyping in Jupyter
+├── experiments/        # Proofs of concept that don't reach production
+├── tests/              # Automated tests
+└── books/              # Notes and summaries from the technical books used
 ```
 
-## Licencia
+## License
 
-Este proyecto se distribuye bajo licencia MIT. Ver [LICENSE](LICENSE).
+This project is distributed under the MIT License. See [LICENSE](LICENSE).
 
-## Aviso
+## Disclaimer
 
-Todo el contenido de negocio (RFPs, requisitos, datasets) es sintético y
-ficticio (empresa ficticia "Andes Digital Networks"). No se usa ninguna
-información confidencial ni propietaria.
+All business content (RFPs, requirements, datasets) is synthetic and
+fictional (fictional company "Andes Digital Networks"). No confidential
+or proprietary information is used.
