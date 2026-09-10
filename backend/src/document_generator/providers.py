@@ -19,6 +19,21 @@ _REQUIREMENT_CATEGORIES = [
 
 _REQUIREMENT_PRIORITIES = ["Critical", "High", "Medium", "Low"]
 
+_PRODUCT_KINDS = ["Router", "Switch", "Gateway", "Controller", "Module"]
+
+_SPECIFICATION_LABELS = [
+    "Operating Temperature",
+    "Power Consumption",
+    "Dimensions",
+    "Weight",
+    "Input Voltage",
+    "Network Interfaces",
+    "Storage Capacity",
+    "Operating Humidity",
+]
+
+_SPECIFICATION_UNITS = ["W", "V", "mm", "kg", "GB", "ports", "%"]
+
 
 class EnterpriseFakerProvider:
     def __init__(self, seed: int) -> None:
@@ -47,6 +62,22 @@ class EnterpriseFakerProvider:
 
     def requirement_id(self, index: int) -> str:
         return f"REQ-{index:04d}"
+
+    def product_name(self) -> str:
+        kind = self._faker.random_element(_PRODUCT_KINDS)
+        return f"{self._faker.word().capitalize()}-{kind}-{self._faker.random_int(100, 999)}"
+
+    def version_number(self) -> str:
+        return f"{self._faker.random_int(1, 5)}.{self._faker.random_int(0, 9)}"
+
+    def specification_item(self) -> tuple[str, str]:
+        label = self._faker.random_element(_SPECIFICATION_LABELS)
+        unit = self._faker.random_element(_SPECIFICATION_UNITS)
+        value = f"{self._faker.random_int(1, 500)} {unit}"
+        return label, value
+
+    def procedure_step(self) -> str:
+        return self._faker.sentence(nb_words=10)
 
     def paragraph(self, sentence_count: int = 5) -> str:
         return self._faker.paragraph(nb_sentences=sentence_count)
