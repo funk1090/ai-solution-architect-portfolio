@@ -1,2 +1,3 @@
 def main() -> None:
-    print("Hello from document-generator!")
+    from document_generator.cli import app
+    app()
