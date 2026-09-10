@@ -8,6 +8,7 @@ No other file in this package needs to change.
 from pathlib import Path
 
 from document_generator.generators.base import DocumentGenerator
+from document_generator.generators.excel_requirements import ExcelRequirementsGenerator
 from document_generator.generators.rfp import RFPGenerator
 from document_generator.models import DocumentType
 from document_generator.providers import EnterpriseFakerProvider
@@ -15,7 +16,7 @@ from document_generator.repository import DocumentMetadataRepository
 
 _REGISTRY: dict[DocumentType, type[DocumentGenerator]] = {
     DocumentType.RFP: RFPGenerator,
-    # DocumentType.EXCEL_REQUIREMENTS: ExcelRequirementsGenerator,   (next iteration)
+    DocumentType.EXCEL_REQUIREMENTS: ExcelRequirementsGenerator,
     # DocumentType.TECHNICAL_MANUAL: TechnicalManualGenerator,       (next iteration)
 }
 

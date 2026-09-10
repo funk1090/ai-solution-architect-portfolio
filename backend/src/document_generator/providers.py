@@ -6,6 +6,19 @@ seeded source — this is what makes NFR1 (reproducibility) possible.
 """
 from faker import Faker
 
+_REQUIREMENT_CATEGORIES = [
+    "Reliability",
+    "Security",
+    "Performance",
+    "Usability",
+    "Compliance",
+    "Integration",
+    "Scalability",
+    "Maintainability",
+]
+
+_REQUIREMENT_PRIORITIES = ["Critical", "High", "Medium", "Low"]
+
 
 class EnterpriseFakerProvider:
     def __init__(self, seed: int) -> None:
@@ -25,6 +38,15 @@ class EnterpriseFakerProvider:
 
     def technical_requirement(self) -> str:
         return f"The solution shall provide {self._faker.catch_phrase().lower()}."
+
+    def requirement_category(self) -> str:
+        return self._faker.random_element(_REQUIREMENT_CATEGORIES)
+
+    def requirement_priority(self) -> str:
+        return self._faker.random_element(_REQUIREMENT_PRIORITIES)
+
+    def requirement_id(self, index: int) -> str:
+        return f"REQ-{index:04d}"
 
     def paragraph(self, sentence_count: int = 5) -> str:
         return self._faker.paragraph(nb_sentences=sentence_count)
