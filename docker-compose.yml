@@ -17,5 +17,45 @@ services:
       timeout: 5s
       retries: 5
 
+  airflow-postgres:
+    image: postgres:16-alpine
+    container_name: portfolio-airflow-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: airflow
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+    volumes:
+      - airflow_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U airflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  airflow:
+    image: apache/airflow:2.9.3
+    container_name: portfolio-airflow
+    restart: unless-stopped
+    user: "${AIRFLOW_UID:-50000}:0"
+    depends_on:
+      airflow-postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
+      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+      _AIRFLOW_WWW_USER_USERNAME: admin
+      _AIRFLOW_WWW_USER_PASSWORD: admin
+    volumes:
+      - ./infrastructure/airflow/dags:/opt/airflow/dags
+      - ./infrastructure/airflow/logs:/opt/airflow/logs
+      - ./infrastructure/airflow/plugins:/opt/airflow/plugins
+      - ./backend/datasets:/opt/airflow/data/datasets:ro
+    ports:
+      - "8080:8080"
+    command: standalone
+
 volumes:
   postgres_data:
+  airflow_postgres_data:
