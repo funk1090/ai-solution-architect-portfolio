@@ -36,3 +36,4 @@ datasets/**/*.pdf
 !datasets/**/.gitkeep
 *:Zone.Identifier
 **/datasets/generated/
+*.zip
