@@ -59,7 +59,7 @@ class DocumentGenerator(ABC):
 
             metadata = DocumentMetadata(
                 document_type=self.document_type,
-                file_path=str(file_path),
+                file_path=str(file_path.resolve()),
                 checksum_sha256=checksum,
                 related_entity=related_entity,
                 seed=self._seed,
