@@ -37,3 +37,4 @@ datasets/**/*.pdf
 *:Zone.Identifier
 **/datasets/generated/
 *.zip
+infrastructure/airflow/logs/

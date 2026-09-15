@@ -17,7 +17,7 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy import Column, DateTime, String, create_engine, select
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import DeclarativeBase, Session
+from sqlalchemy.orm import Session, declarative_base
 
 from ingestion_pipeline.models import (
     DocumentType,
@@ -45,8 +45,7 @@ class InMemoryDocumentMetadataReader(DocumentMetadataReader):
         return list(self._documents)
 
 
-class _MetaBase(DeclarativeBase):
-    pass
+_MetaBase = declarative_base()
 
 
 class _DocumentMetadataRow(_MetaBase):
@@ -107,8 +106,7 @@ class InMemoryIngestedContentRepository(IngestedContentRepository):
         return list(self._records)
 
 
-class _AppBase(DeclarativeBase):
-    pass
+_AppBase = declarative_base()
 
 
 class _IngestedContentRow(_AppBase):

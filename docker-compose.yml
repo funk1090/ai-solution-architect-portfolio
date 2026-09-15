@@ -34,12 +34,14 @@ services:
       retries: 5
 
   airflow:
-    image: apache/airflow:2.9.3
+    build: ./infrastructure/airflow
     container_name: portfolio-airflow
     restart: unless-stopped
     user: "${AIRFLOW_UID:-50000}:0"
     depends_on:
       airflow-postgres:
+        condition: service_healthy
+      postgres:
         condition: service_healthy
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
@@ -47,11 +49,18 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: "false"
       _AIRFLOW_WWW_USER_USERNAME: admin
       _AIRFLOW_WWW_USER_PASSWORD: admin
+      # Consumed by ingestion_pipeline.config.Settings inside the DAG.
+      # Uses the "postgres" service name (Docker network alias), not
+      # localhost -- this container reaches it over the compose network,
+      # not through the host's port mapping.
+      DATABASE_URL: postgresql+psycopg2://portfolio:portfolio@postgres:5432/portfolio
+      PYTHONPATH: /opt/airflow/ingestion_pipeline_src
     volumes:
       - ./infrastructure/airflow/dags:/opt/airflow/dags
       - ./infrastructure/airflow/logs:/opt/airflow/logs
       - ./infrastructure/airflow/plugins:/opt/airflow/plugins
       - ./backend/datasets:/opt/airflow/data/datasets:ro
+      - ./backend/ingestion_pipeline/src/ingestion_pipeline:/opt/airflow/ingestion_pipeline_src/ingestion_pipeline:ro
     ports:
       - "8080:8080"
     command: standalone
