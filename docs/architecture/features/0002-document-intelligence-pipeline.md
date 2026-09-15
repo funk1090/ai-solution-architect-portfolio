@@ -132,3 +132,43 @@ aborting the batch (NFR5).
   an event-driven trigger (e.g., a message queue) if document volume
   ever grows enough to make polling inefficient — explicitly out of
   scope for this phase's data volumes.
+
+## Implementation Notes (post-completion)
+
+The design above was implemented in full, with three notable
+discoveries during implementation that are worth recording here as
+lessons, not just fixed in code silently:
+
+1. **uv workspace auto-discovery broke dependency isolation.** Placing
+   `ingestion_pipeline/` as a subdirectory of `backend/` caused `uv` to
+   automatically treat it as a workspace member, sharing a single
+   `.venv` between both projects and silently uninstalling
+   `document-generator`'s own dependencies during `ingestion_pipeline`'s
+   `uv sync`. Fixed via an explicit `[tool.uv.workspace]` `exclude`
+   entry in `backend/pyproject.toml` (see ADR-0003).
+
+2. **Relative file paths broke across process boundaries.**
+   `document_metadata.file_path` was originally stored relative to the
+   writer's working directory. The moment a different process
+   (`ingestion_pipeline`, run from a different directory) tried to
+   read it, every file lookup failed. Fixed by storing absolute paths
+   at generation time in Feature 0001's `DocumentGenerator.generate()`.
+
+3. **Airflow's custom-image dependency installation required
+   Airflow's own constraints file.** Installing `pdfplumber`, `pandas`,
+   and `sqlalchemy` without constraints let `pip` upgrade `sqlalchemy`
+   past the version Airflow 2.9.3's own ORM models are compatible with,
+   breaking the scheduler at import time. Fixed by installing with
+   `--constraint` against Airflow's official constraints file for
+   2.9.3/Python 3.12. This in turn pinned SQLAlchemy below 2.0, which
+   broke `repository.py`'s use of the 2.0-only `DeclarativeBase` class
+   — resolved by switching to the function-based `declarative_base()`,
+   which is source-compatible with both the constrained version inside
+   the Airflow container and the newer SQLAlchemy used in the local
+   `ingestion_pipeline` virtual environment.
+
+All three were caught by actually running the system end-to-end against
+live PostgreSQL and a real Airflow container, not by unit tests alone —
+a reminder that integration validation catches an entire class of
+issues (environment mismatches, dependency conflicts, cross-process
+assumptions) that isolated unit tests structurally cannot.
