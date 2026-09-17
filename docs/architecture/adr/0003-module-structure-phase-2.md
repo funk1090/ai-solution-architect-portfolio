@@ -47,12 +47,40 @@ not a subdirectory inside it.
   backend/ingestion_pipeline && uv sync` separately from the generator's
   `backend/uv sync` — this is an accepted, documented cost of the
   isolation benefit.
-- The `document_metadata` table schema is currently duplicated (as a
-  read-only SQLAlchemy model) between the two projects. If a third
-  module needs the same schema, this duplication should be resolved by
-  extracting a shared internal package (e.g., `backend/shared_core/`)
-  — tracked here as a trigger condition for a future ADR, not solved
-  preemptively (avoiding speculative generality).
+- **Update (implementation note)**: placing `ingestion_pipeline/` as a
+  subdirectory of `backend/` caused `uv` to auto-detect it as a
+  workspace member and share `backend/.venv` between both projects,
+  actively uninstalling `document-generator`'s own dependencies during
+  `ingestion_pipeline`'s `uv sync` — the opposite of the isolation this
+  ADR intends. Fixed by adding `[tool.uv.workspace]` with an `exclude`
+  entry for `ingestion_pipeline` in `backend/pyproject.toml`, forcing
+  `uv` to treat it as a fully independent project despite the nested
+  path.
+- **Update (recurrence + standing procedure)**: the exact same
+  auto-discovery issue recurred when `requirement_classifier/` (Feature
+  0003) was created — `uv init` printed `Adding requirement-classifier
+  as member of workspace` immediately, and a `members` entry
+  reappeared in `backend/pyproject.toml`'s `[tool.uv.workspace]`
+  alongside the `exclude` list, contradicting it. Two occurrences make
+  this a standing procedure, not a one-off fix: **immediately after
+  running `uv init` for any new module under `backend/`, check the
+  command's own output for "Adding \<name\> as member of workspace".**
+  If it appears, before running any other `uv` command (`uv add`, `uv
+  sync`), open `backend/pyproject.toml` and ensure the new module's
+  name is listed under `[tool.uv.workspace]` `exclude` and is **not**
+  present anywhere under a `members` list — delete any `members` entry
+  entirely if one exists, since `exclude` and `members` for the same
+  package name is a contradiction `uv` does not reliably resolve.
+- The `document_metadata`/`ingested_content` table schemas are now
+  duplicated across **three** independent modules
+  (`ingestion_pipeline`, `requirement_classifier`, and
+  `document_generator` for its own table). This is the trigger
+  condition this ADR originally flagged for extracting a shared
+  internal package — deliberately still deferred (see Feature 0003's
+  Future Improvements) rather than introducing a new cross-project
+  dependency mechanism under time pressure. This should be the first
+  architecture task of the next dedicated session, not deferred a
+  third time.
 - Each module keeps its own `datasets/` output location relative to
   itself, consistent with the `**/datasets/generated/` gitignore
   pattern already in place.
