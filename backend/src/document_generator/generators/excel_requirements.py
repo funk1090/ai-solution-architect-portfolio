@@ -20,16 +20,19 @@ class ExcelRequirementsGenerator(DocumentGenerator):
         source_company = self._provider.company_name()
         row_count = 10
 
-        rows = [
-            {
-                "Requirement ID": self._provider.requirement_id(i),
-                "Description": self._provider.technical_requirement(),
-                "Category": self._provider.requirement_category(),
-                "Priority": self._provider.requirement_priority(),
-                "Source RFP Reference": source_company,
-            }
-            for i in range(row_count)
-        ]
+        rows = []
+        for i in range(row_count):
+            category = self._provider.requirement_category()
+            priority = self._provider.requirement_priority()
+            rows.append(
+                {
+                    "Requirement ID": self._provider.requirement_id(i),
+                    "Description": self._provider.correlated_requirement(category, priority),
+                    "Category": category,
+                    "Priority": priority,
+                    "Source RFP Reference": source_company,
+                }
+            )
         dataframe = pd.DataFrame(rows)
 
         buffer = io.BytesIO()
