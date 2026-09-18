@@ -19,13 +19,17 @@ and synthetic data.
 
 ✅ **Phase 1 complete** — Synthetic Enterprise Document Generator
 (Feature 0001): generates fictional RFPs (PDF), technical requirement
-matrices (Excel), and technical manuals (PDF), with metadata persisted
-to PostgreSQL and integrity verified via SHA-256 checksums.
+matrices (Excel), and technical manuals (PDF).
 
 ✅ **Phase 2 complete** — Document Intelligence Pipeline (Feature 0002):
-extracts text from PDFs and structured data from Excel matrices,
-orchestrated by Apache Airflow. Idempotent (safe to re-run) and
-fault-isolated (one bad file never blocks the rest of a batch).
+extracts text/structured data from generated documents, orchestrated by
+Apache Airflow. Idempotent and fault-isolated.
+
+✅ **Phase 3 complete** — Requirement Intelligence Engine (Feature 0003):
+a text classifier predicting a requirement's Category from its
+Description, trained with stratified cross-validation and evaluated
+against a baseline. **83.5% accuracy vs. a 17.5% majority-class
+baseline** on the real generated dataset.
 
 See [docs/architecture/adr](docs/architecture/adr) for architecture
 decisions and [docs/architecture/features](docs/architecture/features)
@@ -34,7 +38,7 @@ for feature design documents.
 ## Quick start
 
 ```bash
-# 1. Start PostgreSQL (app data) and Airflow (orchestration)
+# 1. Start PostgreSQL and Airflow
 export AIRFLOW_UID=$(id -u)
 docker compose up -d postgres airflow
 
@@ -42,20 +46,20 @@ docker compose up -d postgres airflow
 cd backend
 uv sync
 uv run document-generator generate --document-type rfp --count 5
-uv run document-generator generate --document-type excel_requirements --count 5
+uv run document-generator generate --document-type excel_requirements --count 20
 uv run document-generator generate --document-type technical_manual --count 5
 
-# 3. Run the ingestion pipeline (Phase 2) — either directly...
+# 3. Run the ingestion pipeline (Phase 2)
 cd ingestion_pipeline
 uv sync
 uv run ingestion-pipeline ingest
 
-# ...or through Airflow, at http://localhost:8080 (admin/admin),
-# DAG: ingest_documents
+# 4. Train and use the requirement classifier (Phase 3)
+cd ../requirement_classifier
+uv sync
+uv run requirement-classifier train
+uv run requirement-classifier classify --text "The system must support 10,000 concurrent users."
 ```
-
-Generated files land in `backend/datasets/generated/<document-type>/`.
-Extracted content lands in the `ingested_content` PostgreSQL table.
 
 ## Repository structure
 
@@ -65,7 +69,8 @@ Extracted content lands in the `ingested_content` PostgreSQL table.
 ├── datasets/           # Synthetic data (never real/confidential information)
 ├── backend/            # Backend services
 │   ├── src/document_generator/       # Phase 1: synthetic document generator
-│   └── ingestion_pipeline/           # Phase 2: PDF/Excel extraction pipeline
+│   ├── ingestion_pipeline/           # Phase 2: PDF/Excel extraction pipeline
+│   └── requirement_classifier/       # Phase 3: requirement category classifier
 ├── frontend/           # User interfaces (when applicable)
 ├── infrastructure/     # Docker Compose, Airflow, deployment configuration
 ├── notebooks/          # Exploration and prototyping in Jupyter

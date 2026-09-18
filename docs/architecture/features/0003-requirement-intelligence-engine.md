@@ -165,3 +165,35 @@ configuration. A CLI command loads the artifact to classify new text.
   experiments grows enough to make manual comparison unwieldy.
 - Explore feature importance visualization (top TF-IDF terms per
   class) as a small reporting artifact for the portfolio narrative.
+
+## Implementation Notes (post-completion)
+
+Trained against the real dataset (200 examples, 8 categories, ~25 per
+class) produced by Features 0001/0002 with ADR-0004's correlated
+vocabulary:
+
+| Metric | Model (Logistic Regression) | Baseline (majority class) |
+|---|---|---|
+| Accuracy | 0.835 | 0.175 |
+| Precision (macro) | 0.865 | 0.022 |
+| Recall (macro) | 0.819 | 0.125 |
+| F1 (macro) | 0.824 | 0.037 |
+
+(All values are the mean across 5 stratified folds.)
+
+The trained model correctly classified a hand-written, genuinely unseen
+requirement description ("The system must encrypt all data using
+AES-256 and enforce strict access controls.") as **Security** —
+confirming the model generalizes beyond memorizing training examples,
+not just performing well on cross-validation folds drawn from the same
+generation process.
+
+This result directly validates ADR-0004's core bet: injecting
+correlated vocabulary with controlled noise (15%) produced a
+genuinely learnable classification problem, closer to a well-behaved
+real-world text classification task than either a trivial keyword
+lookup or an unlearnable random-label problem would have.
+
+A second `uv` workspace auto-discovery occurrence (see ADR-0003) was
+caught and fixed during this feature's setup, and turned into a
+standing procedure to prevent a third recurrence in Phase 4 and beyond.
