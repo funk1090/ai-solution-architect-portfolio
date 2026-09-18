@@ -153,3 +153,42 @@ answer is returned together with the source document(s) it came from.
 - Swap in a larger Ollama model via the existing factory once/if
   hardware allows.
 - A simple web UI on top of the CLI, once later phases stabilize.
+
+## Implementation Notes (post-completion)
+
+Validated end-to-end against live PostgreSQL (with `pgvector` enabled)
+and a real, GPU-accelerated Ollama instance (`llama3:latest`, confirmed
+via `nvidia-smi` showing active GPU utilization during inference):
+
+**Grounded, multi-source answer** — asking "What is the budget range
+mentioned in the proposals?" against 20 real generated RFPs correctly
+retrieved four relevant chunks from four different source documents and
+produced a synthesized answer citing real figures from each, including
+an honest note that one source didn't mention the figure explicitly
+rather than fabricating one.
+
+**Correct groundedness fallback, twice over** — an out-of-domain
+question ("What is the capital of France?") and a domain-relevant but
+genuinely unindexed question ("What security requirements appear in
+the documents?") both correctly triggered the "insufficient grounded
+information" fallback instead of the LLM being called at all. The
+second case is worth noting explicitly: it was not a bug. The indexed
+RFP text is generated with generic Faker vocabulary (Design Decision 4,
+Feature 0001), unrelated to any specific requirement category — unlike
+the Excel generator's `correlated_requirement()` (ADR-0004), RFP body
+text was never given category-aware vocabulary. The system correctly
+recognized it had no real security-related content to ground an answer
+in, rather than inventing one. This is now tracked as a Future
+Improvement: either extend category-aware vocabulary to RFP/manual body
+text, or extend retrieval to the already-correlated Excel requirement
+data (both already listed above).
+
+**Infrastructure notes**: switching `postgres` to
+`pgvector/pgvector:pg16` required an explicit `--force-recreate` for
+Docker Compose to actually apply the new image to an already-running
+container — a plain `docker compose up -d` silently kept serving the
+old image despite the compose file being updated. Existing data
+survived the image change intact (verified by row count before and
+after). A pre-existing, unrelated Ollama container on the same host
+port was reused rather than duplicated, exactly as anticipated in
+ADR-0007's Consequences section.
