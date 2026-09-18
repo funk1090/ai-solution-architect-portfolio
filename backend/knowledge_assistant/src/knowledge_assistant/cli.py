@@ -69,5 +69,13 @@ def ask(question: str = typer.Option(..., help="Question to ask the knowledge ba
         typer.echo(f"Sources: {', '.join(s[:8] for s in result.sources)}")
 
 
+@app.command()
+def benchmark_embeddings() -> None:
+    """Feature 0005: measures per-chunk vs batched embedding calls."""
+    from knowledge_assistant.benchmark import run_benchmark
+
+    run_benchmark()
+
+
 if __name__ == "__main__":
     app()

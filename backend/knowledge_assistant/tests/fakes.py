@@ -7,8 +7,12 @@ class FakeEmbeddingModel(EmbeddingModel):
     def __init__(self, vectors: dict[str, list[float]], default: list[float] | None = None) -> None:
         self._vectors = vectors
         self._default = default or [0.0, 0.0]
+        self.call_count = 0
+        self.call_sizes: list[int] = []
 
     def embed(self, texts: list[str]) -> list[list[float]]:
+        self.call_count += 1
+        self.call_sizes.append(len(texts))
         return [self._vectors.get(t, self._default) for t in texts]
 
     @property

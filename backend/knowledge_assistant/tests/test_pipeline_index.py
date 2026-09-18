@@ -21,3 +21,19 @@ def test_reindexing_does_not_duplicate_chunks() -> None:
     assert first.chunks_created > 0
     assert second.chunks_created == 0
     assert second.chunks_skipped == first.chunks_created
+
+
+def test_embeddings_are_batched_once_per_document() -> None:
+    """Feature 0005, FR3: one embed() call per document, not one per chunk."""
+    document = IndexableDocument(
+        source_checksum="doc1",
+        text=" ".join(f"word{i}" for i in range(30)),
+    )
+    reader = InMemoryIngestedContentReader([document])
+    repo = InMemoryVectorStoreRepository()
+    embedding_model = FakeEmbeddingModel(vectors={}, default=[1.0, 0.0])
+
+    summary = run_indexing(reader, embedding_model, repo, chunk_size=5, chunk_overlap=1)
+
+    assert embedding_model.call_count == 1
+    assert embedding_model.call_sizes == [summary.chunks_created]

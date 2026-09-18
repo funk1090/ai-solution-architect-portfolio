@@ -1,4 +1,12 @@
-"""Indexing pipeline: chunk -> embed -> store (FR1/FR2/FR3/FR7)."""
+"""Indexing pipeline: chunk -> embed -> store (FR1/FR2/FR3/FR7).
+
+Performance note (Feature 0005, FR3): embeddings are computed in ONE
+batched call per document, covering every chunk that still needs
+indexing -- not one call per chunk. The embedding model runs on GPU,
+which is built to process batches efficiently; calling it one item at
+a time (the original implementation) wasted that entirely. See
+Feature 0005's benchmark for the measured before/after difference.
+"""
 from dataclasses import dataclass
 
 from knowledge_assistant.chunker import chunk_text
@@ -28,20 +36,32 @@ def run_indexing(
 
     for document in documents:
         text_chunks = chunk_text(document.text, chunk_size, chunk_overlap)
+
+        pending_indices: list[int] = []
+        pending_texts: list[str] = []
         for index, chunk_body in enumerate(text_chunks):
             if vector_repo.exists(document.source_checksum, index):
                 chunks_skipped += 1
-                continue
+            else:
+                pending_indices.append(index)
+                pending_texts.append(chunk_body)
 
-            embedding = embedding_model.embed([chunk_body])[0]
-            chunk = DocumentChunk(
+        if not pending_texts:
+            continue
+
+        embeddings = embedding_model.embed(pending_texts)  # ONE call for the whole document
+
+        new_chunks = [
+            DocumentChunk(
                 source_checksum=document.source_checksum,
                 chunk_index=index,
-                text=chunk_body,
+                text=text,
                 embedding=embedding,
             )
-            vector_repo.upsert_chunks([chunk])
-            chunks_created += 1
+            for index, text, embedding in zip(pending_indices, pending_texts, embeddings)
+        ]
+        vector_repo.upsert_chunks(new_chunks)
+        chunks_created += len(new_chunks)
 
     return IndexingSummary(
         documents_processed=len(documents),
