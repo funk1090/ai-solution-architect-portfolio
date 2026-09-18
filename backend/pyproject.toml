@@ -16,6 +16,7 @@ dependencies = [
     "pydantic>=2.13.5",
     "pydantic-settings>=2.15.0",
     "python-dotenv>=1.2.3",
+    "shared-core",
     "sqlalchemy>=2.0.52",
     "typer>=0.27.2",
 ]
@@ -35,8 +36,12 @@ dev = [
 [tool.uv.workspace] 
 exclude = [
     "ingestion_pipeline",
-    "requirement_classifier"
+    "requirement_classifier",
+    "shared_core"
 ]
+
+[tool.uv.sources]
+shared-core = { path = "shared_core", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

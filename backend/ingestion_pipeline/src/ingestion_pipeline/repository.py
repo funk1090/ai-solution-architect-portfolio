@@ -1,23 +1,24 @@
 """Persistence layer for the ingestion pipeline.
 
-Two distinct repositories, matching two distinct responsibilities:
+Table definitions now live in the shared_core package (ADR-0006). This
+module implements two distinct access policies around those shared
+tables:
 
-- DocumentMetadataReader: READ-ONLY access to the document_metadata
-  table, which is owned and written by the document-generator project.
-  This pipeline never writes to that table.
+- DocumentMetadataReader: READ-ONLY access to document_metadata, owned
+  and written by the document-generator project.
 - IngestedContentRepository: read/write access to ingested_content,
-  which THIS project owns. Its uniqueness constraint on
-  source_checksum is the real enforcement of idempotency (NFR1) — an
-  application-level check alone would have a race condition under
-  concurrent runs.
+  owned by THIS project. Its uniqueness constraint on source_checksum
+  (defined in shared_core) is the real enforcement of idempotency
+  (NFR1).
 """
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from sqlalchemy import Column, DateTime, String, create_engine, select
-from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import Session, declarative_base
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+
+from shared_core.schema import Base, DocumentMetadataTable, IngestedContentTable
 
 from ingestion_pipeline.models import (
     DocumentType,
@@ -45,18 +46,6 @@ class InMemoryDocumentMetadataReader(DocumentMetadataReader):
         return list(self._documents)
 
 
-_MetaBase = declarative_base()
-
-
-class _DocumentMetadataRow(_MetaBase):
-    __tablename__ = "document_metadata"
-
-    id = Column(String(36), primary_key=True)
-    document_type = Column(String(64), nullable=False)
-    file_path = Column(String(1024), nullable=False)
-    checksum_sha256 = Column(String(64), nullable=False, unique=True)
-
-
 class PostgresDocumentMetadataReader(DocumentMetadataReader):
     """Read-only: never calls create_all — that table belongs to the
     document-generator project and is expected to already exist."""
@@ -66,7 +55,7 @@ class PostgresDocumentMetadataReader(DocumentMetadataReader):
 
     def list_all_documents(self) -> list[PendingDocument]:
         with Session(self._engine) as session:
-            rows = session.execute(select(_DocumentMetadataRow)).scalars().all()
+            rows = session.execute(select(DocumentMetadataTable)).scalars().all()
             return [
                 PendingDocument(
                     id=row.id,
@@ -106,32 +95,16 @@ class InMemoryIngestedContentRepository(IngestedContentRepository):
         return list(self._records)
 
 
-_AppBase = declarative_base()
-
-
-class _IngestedContentRow(_AppBase):
-    __tablename__ = "ingested_content"
-
-    id = Column(String(36), primary_key=True)
-    source_checksum = Column(String(64), nullable=False, unique=True)
-    document_type = Column(String(64), nullable=False)
-    extracted_text = Column(String, nullable=True)
-    structured_data = Column(JSONB, nullable=True)
-    status = Column(String(16), nullable=False)
-    error_message = Column(String, nullable=True)
-    ingested_at = Column(DateTime(timezone=True), nullable=False)
-
-
 class PostgresIngestedContentRepository(IngestedContentRepository):
     def __init__(self, database_url: str) -> None:
         self._engine = create_engine(database_url, future=True)
 
     def create_tables(self) -> None:
         """Idempotent — safe to call on every pipeline run."""
-        _AppBase.metadata.create_all(self._engine)
+        Base.metadata.create_all(self._engine)
 
     def save(self, content: IngestedContent) -> None:
-        row = _IngestedContentRow(
+        row = IngestedContentTable(
             id=str(content.id),
             source_checksum=content.source_checksum,
             document_type=content.document_type.value,
@@ -147,14 +120,14 @@ class PostgresIngestedContentRepository(IngestedContentRepository):
 
     def exists_checksum(self, checksum: str) -> bool:
         with Session(self._engine) as session:
-            stmt = select(_IngestedContentRow).where(
-                _IngestedContentRow.source_checksum == checksum
+            stmt = select(IngestedContentTable).where(
+                IngestedContentTable.source_checksum == checksum
             )
             return session.execute(stmt).first() is not None
 
     def list_all(self) -> list[IngestedContent]:
         with Session(self._engine) as session:
-            rows = session.execute(select(_IngestedContentRow)).scalars().all()
+            rows = session.execute(select(IngestedContentTable)).scalars().all()
             return [
                 IngestedContent(
                     id=row.id,
