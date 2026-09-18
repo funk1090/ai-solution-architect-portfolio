@@ -72,7 +72,22 @@ middle ground)
 - This noise rate (15%) becomes a documented, tunable parameter —
   future phases could increase or decrease it to make the classification
   problem harder or easier without redesigning the generator.
+- **Update (extension to RFPGenerator)**: Feature 0004's (RAG) end-to-end
+  validation found that a security-related question against real RFPs
+  produced no grounded answer, because RFP body text used
+  `technical_requirement()` — the original, fully generic method — with
+  no real category-specific vocabulary for embedding-based retrieval to
+  match against. `RFPGenerator` was updated to use
+  `correlated_requirement()` (the same method built for
+  `ExcelRequirementsGenerator`) for its Technical Requirements section,
+  picking a random category/priority per item exactly as the Excel
+  generator does. `TechnicalManualGenerator` was deliberately left
+  unchanged: its specifications/procedures content isn't naturally
+  mapped to the same category taxonomy, and extending it is left as a
+  Future Improvement in Feature 0004, not solved preemptively here.
 
 ## References
 - Feature 0001: Synthetic Enterprise Document Generator.
-- Feature 0003 (Phase 3, forthcoming): Requirement Intelligence Engine.
+- Feature 0003: Requirement Intelligence Engine.
+- Feature 0004: Enterprise AI Knowledge Assistant (the RAG validation
+  that surfaced the RFPGenerator gap closed above).

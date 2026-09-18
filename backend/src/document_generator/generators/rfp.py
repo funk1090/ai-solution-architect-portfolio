@@ -10,6 +10,17 @@ eventually raising "Not enough horizontal space to render a single
 character" even for short, plain ASCII text. This was diagnosed by
 reproducing the failure in isolation before patching (see git history /
 commit message for this fix).
+
+Note on requirement text (ADR-0004 extension): the technical
+requirements section uses correlated_requirement() -- the same
+category/priority-aware vocabulary originally built for the Excel
+generator -- instead of the fully generic technical_requirement().
+This was found missing during Feature 0004 (RAG) validation: a
+security-related question against real RFPs returned no grounded
+answer, because RFP body text carried no real category-specific
+content for the embedding-based retrieval to match against. Extending
+the same correlated vocabulary here closes that gap directly, without
+introducing any new abstraction.
 """
 from fpdf import FPDF
 
@@ -25,7 +36,12 @@ class RFPGenerator(DocumentGenerator):
         company = self._provider.company_name()
         project = self._provider.project_name()
         budget_low, budget_high = self._provider.budget_range_usd()
-        requirements = [self._provider.technical_requirement() for _ in range(5)]
+
+        requirements = []
+        for _ in range(5):
+            category = self._provider.requirement_category()
+            priority = self._provider.requirement_priority()
+            requirements.append(self._provider.correlated_requirement(category, priority))
 
         pdf = FPDF()
         pdf.add_page()
