@@ -2,19 +2,25 @@
 throughout this codebase (generators in Feature 0001, parsers in
 Feature 0002).
 
-To add a new classifier (Decision Tree, Random Forest, SVM -- following
-the roadmap's Hands-On ML chapter progression): add one entry here.
-No other file needs to change.
+Feature 0006 adds "neural_network" here -- the exact scenario this
+factory was built for: a new model registered without touching the
+training/evaluation pipeline at all.
 """
 from sklearn.base import ClassifierMixin
 from sklearn.linear_model import LogisticRegression
+from sklearn.neural_network import MLPClassifier
 
 _REGISTRY: dict[str, type[ClassifierMixin]] = {
     "logistic_regression": LogisticRegression,
+    "neural_network": MLPClassifier,
 }
 
 _DEFAULT_PARAMS: dict[str, dict] = {
     "logistic_regression": {"max_iter": 1000},
+    # Feature 0006: a single hidden layer is a reasonable starting point
+    # for ~200 examples -- a much larger/deeper network would be more
+    # likely to overfit than to genuinely learn more at this data scale.
+    "neural_network": {"hidden_layer_sizes": (50,), "max_iter": 1000},
 }
 
 

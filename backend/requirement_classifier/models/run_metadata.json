@@ -4,27 +4,27 @@
   "n_folds": 5,
   "dataset_size": 200,
   "class_distribution": {
-    "Performance": 25,
-    "Reliability": 16,
+    "Integration": 24,
     "Scalability": 24,
-    "Security": 26,
+    "Maintainability": 23,
+    "Performance": 25,
     "Compliance": 35,
     "Usability": 27,
-    "Integration": 24,
-    "Maintainability": 23
+    "Reliability": 16,
+    "Security": 26
   },
   "cross_validation": {
     "model_metrics_mean": {
       "accuracy": 0.835,
-      "precision": 0.8652480158730158,
-      "recall": 0.8186309523809523,
-      "f1": 0.8240599718908543
+      "precision": 0.859156746031746,
+      "recall": 0.8198809523809525,
+      "f1": 0.8225947010505834
     },
     "model_metrics_std": {
-      "accuracy": 0.03391164991562633,
-      "precision": 0.02751812459598072,
-      "recall": 0.04175229297001505,
-      "f1": 0.03931067762797712
+      "accuracy": 0.051478150704935006,
+      "precision": 0.04316846160945964,
+      "recall": 0.05323651927133278,
+      "f1": 0.05188666901143528
     },
     "baseline_metrics_mean": {
       "accuracy": 0.175,
@@ -39,5 +39,5 @@
       "f1": 0.0
     }
   },
-  "trained_at": "2026-09-17T21:51:38.400131Z"
+  "trained_at": "2026-09-19T23:19:15.979688Z"
 }
