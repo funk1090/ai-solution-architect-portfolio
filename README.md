@@ -17,22 +17,16 @@ and synthetic data.
 
 ## Current status
 
-✅ **Phase 1 complete** — Synthetic Enterprise Document Generator:
-RFPs, technical requirement matrices, and technical manuals.
+✅ **Phase 1** — Synthetic Enterprise Document Generator
+✅ **Phase 2** — Document Intelligence Pipeline (Apache Airflow)
+✅ **Phase 3** — Requirement Intelligence Engine (83.5% accuracy vs. 17.5% baseline)
+✅ **Phase 4** — Enterprise AI Knowledge Assistant (local RAG, pgvector + Ollama)
+✅ **Phase 5** — Performance Lab (15.3x embedding speedup, ~6.4x ingestion speedup)
+✅ **Phase 6** — Document Understanding: Logistic Regression (83.5%) vs.
+a neural network (79.0%) compared honestly — the simpler model won,
+confirmed rather than assumed.
 
-✅ **Phase 2 complete** — Document Intelligence Pipeline: PDF/Excel
-extraction, orchestrated by Apache Airflow.
-
-✅ **Phase 3 complete** — Requirement Intelligence Engine: a text
-classifier, **83.5% accuracy vs. a 17.5% baseline**.
-
-✅ **Phase 4 complete** — Enterprise AI Knowledge Assistant: a local
-RAG pipeline (pgvector + Ollama), GPU-accelerated, with built-in
-anti-hallucination guarantees.
-
-✅ **Phase 5 complete** — Performance Lab: measured, evidence-based
-optimizations — **15.3x faster embedding generation** (batching) and
-**~6.4x faster ingestion** (multiprocessing across CPU cores).
+Only **Phase 7** (Product Hardening) remains.
 
 See [docs/architecture/adr](docs/architecture/adr) for architecture
 decisions and [docs/architecture/features](docs/architecture/features)
@@ -44,8 +38,6 @@ for feature design documents.
 # 1. Start PostgreSQL (with pgvector) and Airflow
 export AIRFLOW_UID=$(id -u)
 docker compose up -d postgres airflow
-# Ollama: point knowledge_assistant's config at any running Ollama
-# instance (localhost:11434 by default).
 
 # 2. Generate the synthetic document corpus (Phase 1)
 cd backend
@@ -54,24 +46,19 @@ uv run document-generator generate --document-type rfp --count 10
 uv run document-generator generate --document-type excel_requirements --count 20
 uv run document-generator generate --document-type technical_manual --count 10
 
-# 3. Run the ingestion pipeline (Phase 2) -- sequential or parallel (Phase 5)
+# 3. Ingestion pipeline (Phase 2/5) -- sequential or parallel
 cd ingestion_pipeline && uv sync
-uv run ingestion-pipeline ingest
-uv run ingestion-pipeline ingest --parallel   # Phase 5: multiprocessing
+uv run ingestion-pipeline ingest --parallel
 
-# 4. Train and use the requirement classifier (Phase 3)
+# 4. Classifier: compare Logistic Regression vs. neural network (Phase 3/6)
 cd ../requirement_classifier && uv sync
-uv run requirement-classifier train
+uv run requirement-classifier compare
 uv run requirement-classifier classify --text "The system must support 10,000 concurrent users."
 
-# 5. Index and query the knowledge assistant (Phase 4)
+# 5. Knowledge assistant (Phase 4/5)
 cd ../knowledge_assistant && uv sync
 uv run knowledge-assistant index
 uv run knowledge-assistant ask --question "What is the budget range mentioned in the proposals?"
-
-# 6. Benchmark performance (Phase 5)
-uv run knowledge-assistant benchmark-embeddings
-cd ../ingestion_pipeline && uv run ingestion-pipeline benchmark
 ```
 
 ## Repository structure
@@ -84,7 +71,7 @@ cd ../ingestion_pipeline && uv run ingestion-pipeline benchmark
 │   ├── src/document_generator/       # Phase 1: synthetic document generator
 │   ├── shared_core/                  # Shared table definitions (ADR-0006)
 │   ├── ingestion_pipeline/           # Phase 2/5: extraction pipeline + parallelism
-│   ├── requirement_classifier/       # Phase 3: requirement category classifier
+│   ├── requirement_classifier/       # Phase 3/6: classical ML + neural network
 │   └── knowledge_assistant/          # Phase 4/5: RAG assistant + benchmarks
 ├── frontend/           # User interfaces (when applicable)
 ├── infrastructure/     # Docker Compose, Airflow, deployment configuration
