@@ -2,7 +2,8 @@
 
 An enterprise-grade AI platform built incrementally as a learning journey
 and professional portfolio, using exclusively open-source technologies
-and synthetic data.
+and synthetic data. **All seven phases of the original roadmap are
+complete.**
 
 ## Philosophy
 
@@ -15,22 +16,20 @@ and synthetic data.
 - **Documentation as Code**: documentation is a deliverable, not an
   afterthought.
 
-## Current status
+## Current status — roadmap complete
 
-✅ **Phase 1** — Synthetic Enterprise Document Generator
-✅ **Phase 2** — Document Intelligence Pipeline (Apache Airflow)
-✅ **Phase 3** — Requirement Intelligence Engine (83.5% accuracy vs. 17.5% baseline)
-✅ **Phase 4** — Enterprise AI Knowledge Assistant (local RAG, pgvector + Ollama)
-✅ **Phase 5** — Performance Lab (15.3x embedding speedup, ~6.4x ingestion speedup)
-✅ **Phase 6** — Document Understanding: Logistic Regression (83.5%) vs.
-a neural network (79.0%) compared honestly — the simpler model won,
-confirmed rather than assumed.
+See [`docs/architecture/SYSTEM_OVERVIEW.md`](docs/architecture/SYSTEM_OVERVIEW.md)
+for the full picture of how all seven phases fit together.
 
-Only **Phase 7** (Product Hardening) remains.
-
-See [docs/architecture/adr](docs/architecture/adr) for architecture
-decisions and [docs/architecture/features](docs/architecture/features)
-for feature design documents.
+| Phase | What it proved | Real result |
+|---|---|---|
+| 1 — Document Generator | Realistic synthetic data generation | 3 document types, category-correlated text |
+| 2 — Ingestion Pipeline | Orchestrated extraction (Apache Airflow) | Idempotent, fault-isolated |
+| 3 — Requirement Classifier | Classical ML on real extracted content | 83.5% accuracy vs. 17.5% baseline |
+| 4 — Knowledge Assistant | Local, self-hosted RAG | GPU-accelerated, verified anti-hallucination |
+| 5 — Performance Lab | Evidence-based optimization | 15.3x / ~6.4x measured speedups |
+| 6 — Document Understanding | Honest model comparison | Simpler model won — confirmed, not assumed |
+| 7 — Product Hardening | Unified, authenticated, observable API | 6/6 CI jobs green, validated over real HTTP |
 
 ## Quick start
 
@@ -38,6 +37,8 @@ for feature design documents.
 # 1. Start PostgreSQL (with pgvector) and Airflow
 export AIRFLOW_UID=$(id -u)
 docker compose up -d postgres airflow
+# Point knowledge_assistant/api at any running Ollama instance
+# (localhost:11434 by default).
 
 # 2. Generate the synthetic document corpus (Phase 1)
 cd backend
@@ -46,39 +47,46 @@ uv run document-generator generate --document-type rfp --count 10
 uv run document-generator generate --document-type excel_requirements --count 20
 uv run document-generator generate --document-type technical_manual --count 10
 
-# 3. Ingestion pipeline (Phase 2/5) -- sequential or parallel
+# 3. Ingest (Phase 2/5)
 cd ingestion_pipeline && uv sync
 uv run ingestion-pipeline ingest --parallel
 
-# 4. Classifier: compare Logistic Regression vs. neural network (Phase 3/6)
+# 4. Classify (Phase 3/6)
 cd ../requirement_classifier && uv sync
 uv run requirement-classifier compare
-uv run requirement-classifier classify --text "The system must support 10,000 concurrent users."
 
-# 5. Knowledge assistant (Phase 4/5)
+# 5. Index and query the knowledge assistant (Phase 4/5)
 cd ../knowledge_assistant && uv sync
 uv run knowledge-assistant index
-uv run knowledge-assistant ask --question "What is the budget range mentioned in the proposals?"
+
+# 6. Run everything behind one authenticated API (Phase 7)
+cd ../api && uv sync
+cp .env.example .env   # set a real API_KEY
+uv run uvicorn portfolio_api.main:app --port 8000
+
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/assistant/ask \
+  -H "X-API-Key: <your key>" -H "Content-Type: application/json" \
+  -d '{"question": "What is the budget range mentioned in the proposals?"}'
 ```
 
 ## Repository structure
 
 ```
 .
-├── docs/               # Architecture documentation, ADRs, diagrams
-├── datasets/           # Synthetic data (never real/confidential information)
-├── backend/            # Backend services
-│   ├── src/document_generator/       # Phase 1: synthetic document generator
+├── .github/workflows/   # CI: one job per module (Phase 7)
+├── docs/                # Architecture documentation, ADRs, diagrams
+│   └── architecture/SYSTEM_OVERVIEW.md   # Start here
+├── datasets/            # Synthetic data (never real/confidential information)
+├── backend/             # Six independent uv projects
+│   ├── src/document_generator/       # Phase 1
 │   ├── shared_core/                  # Shared table definitions (ADR-0006)
-│   ├── ingestion_pipeline/           # Phase 2/5: extraction pipeline + parallelism
-│   ├── requirement_classifier/       # Phase 3/6: classical ML + neural network
-│   └── knowledge_assistant/          # Phase 4/5: RAG assistant + benchmarks
-├── frontend/           # User interfaces (when applicable)
-├── infrastructure/     # Docker Compose, Airflow, deployment configuration
-├── notebooks/          # Exploration and prototyping in Jupyter
-├── experiments/        # Proofs of concept that don't reach production
-├── tests/              # Automated tests
-└── books/              # Notes and summaries from the technical books used
+│   ├── ingestion_pipeline/           # Phase 2/5
+│   ├── requirement_classifier/       # Phase 3/6
+│   ├── knowledge_assistant/          # Phase 4/5
+│   └── api/                          # Phase 7: unifies all of the above
+├── infrastructure/      # Docker Compose, Airflow configuration
+└── frontend/            # Not yet built -- see SYSTEM_OVERVIEW's Future Improvements
 ```
 
 ## License
