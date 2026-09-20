@@ -1,0 +1,41 @@
+[project]
+name = "portfolio-api"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Enzo Huanca", email = "enzo.huanca.a@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "document-generator",
+    "fastapi>=0.141.1",
+    "ingestion-pipeline",
+    "knowledge-assistant",
+    "prometheus-fastapi-instrumentator>=8.1.0",
+    "pydantic-settings>=2.15.0",
+    "python-dotenv>=1.2.3",
+    "requirement-classifier",
+    "shared-core",
+    "uvicorn[standard]>=0.53.0",
+]
+
+[project.scripts]
+portfolio-api = "portfolio_api:main"
+
+[build-system]
+requires = ["uv_build>=0.12.12,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
+
+[tool.uv.sources]
+shared-core = { path = "../shared_core", editable = true }
+document-generator = { path = "../", editable = true }
+ingestion-pipeline = { path = "../ingestion_pipeline", editable = true }
+requirement-classifier = { path = "../requirement_classifier", editable = true }
+knowledge-assistant = { path = "../knowledge_assistant", editable = true }

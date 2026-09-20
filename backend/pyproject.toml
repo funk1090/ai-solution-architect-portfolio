@@ -38,7 +38,8 @@ exclude = [
     "ingestion_pipeline",
     "requirement_classifier",
     "shared_core",
-    "knowledge_assistant"
+    "knowledge_assistant",
+    "api"
 ]
 
 [tool.uv.sources]

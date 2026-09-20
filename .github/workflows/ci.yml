@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Feature 0007, NFR4: each module runs as its own job, mirroring the
+# monorepo's own uv-per-module isolation (ADR-0003). A failure in one
+# module's tests never blocks reporting results for the others.
+#
+# Scope boundary (see Feature 0007's design doc): these are the unit
+# test suites already proven to need no live PostgreSQL, Airflow, or
+# Ollama. The real end-to-end validations for those were done manually
+# in Features 0002/0004/0005 and are not re-run here.
+
+jobs:
+  document-generator:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: backend
+        run: uv sync
+      - name: Run tests
+        working-directory: backend
+        run: uv run pytest -v
+
+  shared-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: backend/shared_core
+        run: uv sync
+      - name: Verify import
+        working-directory: backend/shared_core
+        run: uv run python -c "from shared_core.schema import Base; print('OK')"
+
+  ingestion-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: backend/ingestion_pipeline
+        run: uv sync
+      - name: Run tests
+        working-directory: backend/ingestion_pipeline
+        run: uv run pytest -v
+
+  requirement-classifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: backend/requirement_classifier
+        run: uv sync
+      - name: Run tests
+        working-directory: backend/requirement_classifier
+        run: uv run pytest -v
+
+  knowledge-assistant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: backend/knowledge_assistant
+        run: uv sync
+      - name: Run tests
+        working-directory: backend/knowledge_assistant
+        run: uv run pytest -v
+
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # Note: this installs the SAME heavy ML dependencies as the
+      # requirement-classifier and knowledge-assistant jobs
+      # (scikit-learn, sentence-transformers/torch), because this
+      # project's editable dependencies on those modules pull their
+      # full dependency trees in too -- a direct, honest consequence of
+      # NFR1 (reuse existing modules rather than reimplement). This job
+      # will be roughly as slow as knowledge-assistant's, not as fast
+      # as document-generator's.
+      - name: Install dependencies
+        working-directory: backend/api
+        run: uv sync
+      - name: Run tests
+        working-directory: backend/api
+        run: uv run pytest -v
