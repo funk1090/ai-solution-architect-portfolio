@@ -2,18 +2,19 @@
 from fastapi import FastAPI
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from portfolio_api.routers import assistant, classifier, documents, ingestion
+from portfolio_api.routers import assistant, classifier, corpus, documents, ingestion
 
 app = FastAPI(
     title="AI Solution Architect Portfolio API",
     description="Unified API over document generation, ingestion, classification, and RAG.",
-    version="0.7.0",
+    version="0.8.0",
 )
 
 app.include_router(documents.router)
 app.include_router(ingestion.router)
 app.include_router(classifier.router)
 app.include_router(assistant.router)
+app.include_router(corpus.router)
 
 # FR3: /metrics, excluded from the OpenAPI schema (it's an
 # infrastructure endpoint, not part of the product's own API surface).

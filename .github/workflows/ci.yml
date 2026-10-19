@@ -81,17 +81,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      # Note: this installs the SAME heavy ML dependencies as the
-      # requirement-classifier and knowledge-assistant jobs
-      # (scikit-learn, sentence-transformers/torch), because this
-      # project's editable dependencies on those modules pull their
-      # full dependency trees in too -- a direct, honest consequence of
-      # NFR1 (reuse existing modules rather than reimplement). This job
-      # will be roughly as slow as knowledge-assistant's, not as fast
-      # as document-generator's.
       - name: Install dependencies
         working-directory: backend/api
-        run: uv sync
+        run: uv sync --no-editable
       - name: Run tests
         working-directory: backend/api
+        run: uv run pytest -v
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install dependencies
+        working-directory: frontend
+        run: uv sync
+      - name: Run tests
+        working-directory: frontend
         run: uv run pytest -v

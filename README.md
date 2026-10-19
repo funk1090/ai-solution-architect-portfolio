@@ -69,6 +69,17 @@ curl -X POST http://localhost:8000/assistant/ask \
   -H "X-API-Key: <your key>" -H "Content-Type: application/json" \
   -d '{"question": "What is the budget range mentioned in the proposals?"}'
 ```
+Web interface
+
+With the API running (cd backend/api && uv run uvicorn portfolio_api.main:app --port 8000):
+
+bash
+cd frontend
+cp .env.example .env     # API_KEY must match backend/api/.env
+uv sync
+uv run streamlit run src/portfolio_frontend/app.py
+
+Open http://localhost:8501.
 
 ## Repository structure
 

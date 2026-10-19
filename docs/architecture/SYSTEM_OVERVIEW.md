@@ -54,7 +54,7 @@ extracted content independently, for two different purposes
 (classification and retrieval-augmented answering). Phase 7 doesn't add
 a new capability — it's the front door to the four that already exist.
 
-## The six independent projects
+## The seven independent projects
 
 | Project | Phase(s) | Owns | Reads |
 |---|---|---|---|
@@ -85,6 +85,10 @@ merging everything into one project to avoid the friction.
 | 6 | Honest model comparison | Logistic Regression beat a neural network — confirmed, not assumed |
 | 7 | Productization | Unified API, auth, metrics, CI |
 
+## The web frontend (v0.8.0)
+
+frontend/ is a Streamlit application that consumes the API over HTTP. It contains no business logic: every page calls a typed ApiClient, and the API key lives only on the Streamlit server. Four pages cover the platform: Corpus (status and counts), Pipeline (generate / ingest / index), Ask (grounded answers with readable sources) and Classify (requirement classification and model comparison). See docs/architecture/features/0008-web-frontend.md.
+
 ## Where to go next
 
 - **A specific decision's reasoning**: `docs/architecture/adr/` (8
@@ -93,6 +97,6 @@ merging everything into one project to avoid the friction.
   (one document per phase, including real implementation notes added
   after building each).
 - **What changed in each release**: `docs/releases/` (`v0.1.0` through
-  `v0.7.0`), or the GitHub Releases page for the same content with
+  `v0.8.0`), or the GitHub Releases page for the same content with
   working cross-links.
 - **How to run it yourself**: the root `README.md`'s Quick Start.
