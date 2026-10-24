@@ -15,3 +15,9 @@ class Settings(BaseSettings):
     chunk_overlap: int = 40
     top_k: int = 4
     similarity_threshold: float = 0.3
+
+    # Feature 0009: compliance checks retrieve fewer, stricter passages
+    # than free-form Q&A. The threshold is a starting point, calibrated
+    # with `compliance-evaluate` (not guessed).
+    compliance_top_k: int = 3
+    compliance_similarity_threshold: float = 0.3

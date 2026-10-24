@@ -3,7 +3,7 @@ import streamlit as st
 
 from portfolio_frontend.api_client import ApiClient
 from portfolio_frontend.config import Settings
-from portfolio_frontend.views import ask, classify, corpus, pipeline
+from portfolio_frontend.views import ask, classify, compliance, corpus, pipeline
 
 
 @st.cache_resource
@@ -25,10 +25,11 @@ def main() -> None:
         "Corpus": corpus,
         "Pipeline": pipeline,
         "Ask": ask,
+        "Compliance": compliance,
         "Classify": classify,
     }
     choice = st.sidebar.radio("Navigate", list(pages))
-    st.sidebar.caption("Frontend v0.1.0 - client of the Portfolio API")
+    st.sidebar.caption("Frontend v0.2.0 - client of the Portfolio API")
     pages[choice].render(client)
 
 

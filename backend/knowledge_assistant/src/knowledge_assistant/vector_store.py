@@ -46,15 +46,23 @@ class VectorStoreRepository(ABC):
 
     @abstractmethod
     def similarity_search(
-        self, query_embedding: list[float], top_k: int
-    ) -> list[RetrievedChunk]: ...
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        document_type: str | None = None,
+    ) -> list[RetrievedChunk]:
+        """Top-k most similar chunks. When `document_type` is given
+        (Feature 0009), only chunks of documents of that type compete."""
+
 
 
 class InMemoryVectorStoreRepository(VectorStoreRepository):
     """Test double — never used in production."""
 
-    def __init__(self) -> None:
+    def __init__(self, document_types: dict[str, str] | None = None) -> None:
         self._chunks: list[DocumentChunk] = []
+        # checksum -> document type, only needed to test type filtering
+        self._document_types = document_types or {}
 
     def upsert_chunks(self, chunks: list[DocumentChunk]) -> None:
         for chunk in chunks:
@@ -68,7 +76,10 @@ class InMemoryVectorStoreRepository(VectorStoreRepository):
         )
 
     def similarity_search(
-        self, query_embedding: list[float], top_k: int
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        document_type: str | None = None,
     ) -> list[RetrievedChunk]:
         def cosine(a: list[float], b: list[float]) -> float:
             dot = sum(x * y for x, y in zip(a, b))
@@ -86,6 +97,8 @@ class InMemoryVectorStoreRepository(VectorStoreRepository):
                 score=cosine(query_embedding, c.embedding or []),
             )
             for c in self._chunks
+            if document_type is None
+            or self._document_types.get(c.source_checksum) == document_type
         ]
         scored.sort(key=lambda r: r.score, reverse=True)
         return scored[:top_k]
@@ -130,13 +143,27 @@ class PgVectorRepository(VectorStoreRepository):
             return session.execute(stmt).first() is not None
 
     def similarity_search(
-        self, query_embedding: list[float], top_k: int
+        self,
+        query_embedding: list[float],
+        top_k: int,
+        document_type: str | None = None,
     ) -> list[RetrievedChunk]:
         with Session(self._engine) as session:
             distance = _DocumentChunkTable.embedding.cosine_distance(query_embedding).label(
                 "distance"
             )
-            stmt = select(_DocumentChunkTable, distance).order_by(distance).limit(top_k)
+            stmt = select(_DocumentChunkTable, distance)
+            if document_type is not None:
+                # Feature 0009: join to ingested_content (owned by
+                # ingestion_pipeline, schema in shared_core) for the type;
+                # document_chunks itself is unchanged -- no migration.
+                from shared_core.schema import IngestedContentTable
+
+                stmt = stmt.join(
+                    IngestedContentTable,
+                    IngestedContentTable.source_checksum == _DocumentChunkTable.source_checksum,
+                ).where(IngestedContentTable.document_type == document_type)
+            stmt = stmt.order_by(distance).limit(top_k)
             rows = session.execute(stmt).all()
             return [
                 RetrievedChunk(

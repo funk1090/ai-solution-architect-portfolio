@@ -118,3 +118,58 @@ def test_classify_page_shows_the_category() -> None:
 
     assert not at.exception
     assert any("Security" in s.value for s in at.success)
+
+
+def _compliance_script(client):
+    from portfolio_frontend.views import compliance
+
+    compliance.render(client)
+
+
+class ComplianceFake(FakeClient):
+    def list_rfps(self):
+        from portfolio_frontend.api_client import RfpInfo
+
+        return [RfpInfo(source_checksum="r1", file_name="rfp_0001.pdf", issuing_organization="Acme")]
+
+    def check_compliance(self, rfp_checksum, use_judge=True):
+        from portfolio_frontend.api_client import AssessmentItem, ComplianceResult, EvidenceItem, RfpInfo
+
+        return ComplianceResult(
+            rfp=RfpInfo(source_checksum="r1", file_name="rfp_0001.pdf", issuing_organization="Acme"),
+            counts={"SUPPORTED": 1, "PARTIAL": 0, "NOT_EVIDENCED": 1, "NEEDS_REVIEW": 0},
+            assessments=[
+                AssessmentItem(
+                    number=1, requirement="The solution shall provide audit trails.", verdict="SUPPORTED",
+                    rationale="Found in the manual.",
+                    evidence=[EvidenceItem(source_checksum="m1", file_name="technical_manual_0003.pdf", text="audit trails", score=0.81)],
+                ),
+                AssessmentItem(
+                    number=2, requirement="The solution shall provide data residency.", verdict="NOT_EVIDENCED",
+                    rationale="No passage.", evidence=[],
+                ),
+            ],
+        )
+
+
+def test_compliance_page_runs_a_check_and_shows_verdicts_and_evidence() -> None:
+    at = AppTest.from_function(_compliance_script, default_timeout=30, args=(ComplianceFake(),)).run()
+    at.button[0].click().run()
+
+    assert not at.exception
+    assert [m.value for m in at.metric] == ["1", "0", "1", "0"]
+    labels = " ".join(e.label for e in at.expander)
+    assert "[SUPPORTED]" in labels and "[NOT EVIDENCED]" in labels
+    body = " ".join(m.value for m in at.markdown)
+    assert "technical_manual_0003.pdf" in body
+
+
+def test_compliance_page_handles_no_rfps() -> None:
+    class Empty(ComplianceFake):
+        def list_rfps(self):
+            return []
+
+    at = AppTest.from_function(_compliance_script, default_timeout=30, args=(Empty(),)).run()
+
+    assert not at.exception
+    assert any("No ingested RFPs" in i.value for i in at.info)

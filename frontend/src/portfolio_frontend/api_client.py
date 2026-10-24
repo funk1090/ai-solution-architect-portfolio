@@ -84,6 +84,33 @@ class CompareResult(BaseModel):
     accuracies: dict[str, float]
 
 
+class RfpInfo(BaseModel):
+    source_checksum: str
+    file_name: str
+    issuing_organization: str
+
+
+class EvidenceItem(BaseModel):
+    source_checksum: str
+    file_name: str | None = None
+    text: str
+    score: float
+
+
+class AssessmentItem(BaseModel):
+    number: int
+    requirement: str
+    verdict: str
+    rationale: str
+    evidence: list[EvidenceItem]
+
+
+class ComplianceResult(BaseModel):
+    rfp: RfpInfo
+    counts: dict[str, int]
+    assessments: list[AssessmentItem]
+
+
 class ApiClient:
     def __init__(
         self,
@@ -165,6 +192,34 @@ class ApiClient:
 
     def classify(self, text: str) -> ClassifyResult:
         return self._request("POST", "/classifier/classify", ClassifyResult, json={"text": text})
+
+    def list_rfps(self) -> list[RfpInfo]:
+        timeout = self._short
+        try:
+            response = self._client.get("/compliance/rfps", timeout=timeout)
+        except httpx.ConnectError as exc:
+            raise ApiUnreachable(
+                f"Cannot reach the API at {self._client.base_url}. Is it running?"
+            ) from exc
+        except httpx.TimeoutException as exc:
+            raise ApiTimeout(f"The API did not answer within {timeout:.0f}s.") from exc
+        if response.status_code == 401:
+            raise ApiUnauthorized("The API rejected the API key (401). Check API_KEY.")
+        if response.status_code >= 400:
+            raise ApiError(f"API error {response.status_code}: {response.text[:300]}")
+        try:
+            return [RfpInfo.model_validate(item) for item in response.json()]
+        except (ValueError, ValidationError, TypeError) as exc:
+            raise ApiError("The API returned an unexpected response format.") from exc
+
+    def check_compliance(self, rfp_checksum: str, use_judge: bool = True) -> ComplianceResult:
+        return self._request(
+            "POST",
+            "/compliance/check",
+            ComplianceResult,
+            long=True,
+            json={"rfp_checksum": rfp_checksum, "use_judge": use_judge},
+        )
 
     def compare(self) -> CompareResult:
         return self._request("POST", "/classifier/compare", CompareResult, long=True)

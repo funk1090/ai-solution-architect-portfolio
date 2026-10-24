@@ -122,3 +122,39 @@ def test_long_operations_use_the_long_timeout() -> None:
     client.ingest(parallel=True)
 
     assert seen["timeout"] == 123
+
+
+def test_check_compliance_parses_the_report_and_uses_the_long_timeout() -> None:
+    seen = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["timeout"] = request.extensions["timeout"]["read"]
+        seen["body"] = request.content
+        return httpx.Response(
+            200,
+            json={
+                "rfp": {"source_checksum": "r1", "file_name": "rfp_0001.pdf", "issuing_organization": "Acme"},
+                "counts": {"SUPPORTED": 1, "PARTIAL": 0, "NOT_EVIDENCED": 0, "NEEDS_REVIEW": 0},
+                "assessments": [
+                    {
+                        "number": 1, "requirement": "req", "verdict": "SUPPORTED", "rationale": "ok",
+                        "evidence": [{"source_checksum": "m1", "file_name": "technical_manual_0001.pdf", "text": "t", "score": 0.8}],
+                    }
+                ],
+            },
+        )
+
+    client = ApiClient("http://api.test", "k", long_timeout=99, transport=httpx.MockTransport(handler))
+    result = client.check_compliance("r1", use_judge=False)
+
+    assert seen["timeout"] == 99
+    assert b'"use_judge":false' in seen["body"].replace(b" ", b"")
+    assert result.assessments[0].evidence[0].file_name == "technical_manual_0001.pdf"
+
+
+def test_list_rfps_parses_a_list_and_maps_errors() -> None:
+    ok = make_client(lambda r: httpx.Response(200, json=[{"source_checksum": "a", "file_name": "rfp_0000.pdf", "issuing_organization": "X"}]))
+    assert ok.list_rfps()[0].file_name == "rfp_0000.pdf"
+
+    with pytest.raises(ApiUnauthorized):
+        make_client(lambda r: httpx.Response(401)).list_rfps()
