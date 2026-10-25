@@ -158,10 +158,13 @@ Working implementation, unit tests, documentation (README quick start with Docke
 
 - Generate / ingest / index from inside the containers on an empty database. Existing rows hold host paths, so ingesting old documents from a container would fail; a clean volume should work but was not exercised.
 - GPU reservation of the `ollama` profile service (the author uses an existing Ollama container).
-- The `docker` CI job on a cold runner (build time and Hugging Face download).
 
 ## Known limitations
 
 - The limiter is per process; with one shared key it is effectively global. No throttling of failed authentication.
 - The frontend has no login; hence the `127.0.0.1` bindings.
 - The API image is large (3.99 GB) because the whole monorepo and its ML dependencies are installed.
+
+## Found by CI after implementation
+
+The `docker` job failed on its first run. `/corpus/summary` only handled a missing `document_chunks` table; on an empty database `document_metadata` and `ingested_content` do not exist until the first feature creates them, so the endpoint returned 500. It was invisible locally because the author's tables already existed. Fix: `read_counts` checks which tables exist and counts a missing one as empty (tests with SQLite: empty database, partially created database). The `docker` job on a cold runner then passed, so the empty-database path is now validated end to end by CI (health, authentication, rate limiting, frontend health).
