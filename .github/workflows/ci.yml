@@ -99,3 +99,26 @@ jobs:
       - name: Run tests
         working-directory: frontend
         run: uv run pytest -v
+
+  # Feature 0010: the one job that builds the real images and starts the
+  # real stack (PostgreSQL + API + frontend). It does not start Ollama, so
+  # it checks wiring, authentication and rate limiting, not LLM answers.
+  docker:
+    runs-on: ubuntu-latest
+    env:
+      API_KEY: ci-smoke-key
+      RATE_LIMIT_DEFAULT_PER_MINUTE: "5"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose config --quiet
+      - name: Build and start the stack
+        run: docker compose up -d --build --wait --wait-timeout 300
+      - name: Smoke test
+        run: SMOKE_RATE_LIMIT=5 bash scripts/smoke.sh
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs --no-color --tail=200
+      - name: Stop the stack
+        if: always()
+        run: docker compose down -v

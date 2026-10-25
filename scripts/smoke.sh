@@ -18,7 +18,7 @@ check() {
     failures=$((failures + 1))
   fi
 }
-status() { curl -s -o /dev/null -w "%{http_code}" "$@" || echo "000"; }
+status() { curl -s -o /dev/null -w "%{http_code}" "$@" || true; }
 
 check "API /health"                 200 "$(status "$API_URL/health")"
 check "Missing key is rejected"     422 "$(status "$API_URL/corpus/summary")"
