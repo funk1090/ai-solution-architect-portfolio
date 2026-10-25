@@ -1,6 +1,6 @@
 # Feature 0010: Containerized Deployment and API Rate Limiting
 
-**Status:** Proposed
+**Status:** Implemented
 **Target release:** v0.9.0 (together with Feature 0009 and the project closure)
 **Depends on:** Feature 0007 (unified API), Feature 0008 (frontend), Feature 0009 (compliance)
 
@@ -120,3 +120,48 @@ backend/api/src/portfolio_api/rate_limit.py
 
 ## 10. Definition of Done
 Working implementation, unit tests, documentation (README quick start with Docker, this document, SYSTEM_OVERVIEW update), architecture diagram of the final system, Dockerfiles and compose, example `.env`, smoke script green locally and in CI, release notes v0.9.0, Future Work section.
+
+
+---
+
+# Implementation Notes (Feature 0010)
+
+**Status:** Implemented and validated against the real stack (2026-10-24). CI `docker` job: see the v0.9.0 release notes.
+**Release:** v0.9.0 (bundled with Feature 0009).
+
+## What was built
+
+- **Rate limiter** (`portfolio_api/rate_limit.py`): token bucket per API key, in process, thread-safe, LRU-bounded (1024 keys), injectable clock. Two FastAPI dependencies, both built on `verify_api_key` (which now returns the key): `limit_default` is attached to every router in `main.py`; `limit_expensive` is added on six routes (`/assistant/index`, `/assistant/ask`, `/compliance/check`, `/classifier/compare`, `/documents/generate`, `/ingestion/run`). `/health` and `/metrics` are outside it. Settings: `rate_limit_default_per_minute` (120) and `rate_limit_expensive_per_minute` (10); `0` disables a tier.
+- **Frontend**: `ApiRateLimited` (carries `retry_after`) and a single `_raise_for_status` used by every request path.
+- **Images**: `backend/api/Dockerfile` (locked dependencies via `uv export`, without the `nvidia-*`/`triton` packages, CPU torch through `--torch-backend cpu`, embedding model baked in, non-root, healthcheck) and `frontend/Dockerfile` (`uv sync --frozen`, no torch). Build context is the repository root; `.dockerignore` keeps `.venv`, `.env`, tests and datasets out.
+- **Compose**: `api` and `frontend` services; `ollama` and `airflow` moved to profiles; Postgres published on `127.0.0.1`; `API_KEY` required (`${API_KEY:?...}`); `host.docker.internal` mapped for Linux hosts; documents live in a named volume.
+- **Smoke test**: `scripts/smoke.sh` (health, 422 without key, 401 with a wrong key, 200 with the key, frontend health, optional 429). CI job `docker` builds the stack without Ollama and runs it with a limit of 5 per minute.
+
+## Measured / observed
+
+| Item | Result |
+|---|---|
+| Rate limit over HTTP (limit 3 per minute) | `200 200 200 429 429` |
+| API image build (cold) | about 2 minutes; 3.99 GB |
+| Frontend image build | about 30 seconds; 1.28 GB |
+| Stack start (`up --wait`) | all three services healthy in under 20 s once built |
+| `scripts/smoke.sh` | 5/5 checks pass |
+| Compliance through the containerized stack | same verdicts as the CLI; the container reaches the GPU Ollama via `host.docker.internal` |
+
+## Decisions that held, and a correction
+
+- The design listed GPU passthrough to Docker as an unverified risk. It was not: Ollama already ran as a GPU container on the author's machine, so the design now treats it as available and keeps Ollama out of the default stack only because it is shared with another project.
+- The tier wiring test originally inspected FastAPI route internals; that broke on a newer FastAPI (lazy included routers). It was replaced by a source scan plus behavioural tests, which do not depend on framework internals.
+- A request that fails body validation (422) still consumes a rate-limit token (FastAPI resolves dependencies before reporting body errors), whereas missing or wrong credentials (422/401) do not. Only authenticated clients can spend tokens.
+
+## Not validated
+
+- Generate / ingest / index from inside the containers on an empty database. Existing rows hold host paths, so ingesting old documents from a container would fail; a clean volume should work but was not exercised.
+- GPU reservation of the `ollama` profile service (the author uses an existing Ollama container).
+- The `docker` CI job on a cold runner (build time and Hugging Face download).
+
+## Known limitations
+
+- The limiter is per process; with one shared key it is effectively global. No throttling of failed authentication.
+- The frontend has no login; hence the `127.0.0.1` bindings.
+- The API image is large (3.99 GB) because the whole monorepo and its ML dependencies are installed.

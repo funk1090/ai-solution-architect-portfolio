@@ -1,0 +1,30 @@
+flowchart LR
+    User([Browser]) --> FE
+
+    subgraph Compose["docker compose - ports bound to 127.0.0.1"]
+        direction LR
+        FE["frontend<br/>Streamlit :8501<br/>pure API client"]
+
+        subgraph API["api container - FastAPI :8000"]
+            direction TB
+            EDGE["API key auth<br/>rate limiting<br/>/metrics"]
+            GEN["document_generator"]
+            ING["ingestion_pipeline"]
+            CLS["requirement_classifier"]
+            KA["knowledge_assistant<br/>RAG + compliance"]
+            EDGE --> GEN
+            EDGE --> ING
+            EDGE --> CLS
+            EDGE --> KA
+        end
+
+        PG[("postgres + pgvector<br/>document_metadata<br/>ingested_content<br/>document_chunks")]
+    end
+
+    LLM["Ollama (GPU), llama3<br/>existing container<br/>or --profile ollama"]
+    AF["Airflow<br/>--profile airflow"]
+
+    FE -->|"HTTP + X-API-Key"| EDGE
+    API --> PG
+    KA -->|"answers and<br/>compliance judge"| LLM
+    AF -.->|"scheduled ingestion"| PG
