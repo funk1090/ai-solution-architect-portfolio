@@ -52,3 +52,29 @@ def test_unauthenticated_request_never_reads_the_database() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 422
+
+
+def test_read_counts_on_an_empty_database_is_all_zero(tmp_path) -> None:
+    from portfolio_api.routers.corpus import read_counts
+
+    counts = read_counts(f"sqlite:///{tmp_path / 'empty.db'}")
+
+    assert counts.generated == {} and counts.ingested == {} and counts.indexed_chunks == 0
+
+
+def test_read_counts_with_only_some_tables_created(tmp_path) -> None:
+    from sqlalchemy import create_engine, text
+
+    from portfolio_api.routers.corpus import read_counts
+
+    url = f"sqlite:///{tmp_path / 'partial.db'}"
+    engine = create_engine(url)
+    with engine.begin() as conn:
+        conn.execute(text("CREATE TABLE document_chunks (id INTEGER)"))
+        conn.execute(text("INSERT INTO document_chunks VALUES (1), (2), (3)"))
+    engine.dispose()
+
+    counts = read_counts(url)
+
+    assert counts.indexed_chunks == 3
+    assert counts.generated == {} and counts.ingested == {}

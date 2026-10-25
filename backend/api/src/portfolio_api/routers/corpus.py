@@ -53,33 +53,40 @@ def build_summary(counts: CorpusCounts) -> CorpusSummary:
     )
 
 
-def read_counts() -> CorpusCounts:
+def read_counts(database_url: str | None = None) -> CorpusCounts:
+    """Counts per document type. Every table is created lazily by the first
+    feature that needs it, so on a fresh database any of them may not exist
+    yet: a missing table simply counts as empty (never an error)."""
     from shared_core.schema import DocumentMetadataTable, IngestedContentTable
-    from sqlalchemy import create_engine, func, select, text
-    from sqlalchemy.exc import ProgrammingError
+    from sqlalchemy import create_engine, func, inspect, select, text
 
     from knowledge_assistant.config import Settings
 
-    engine = create_engine(Settings().database_url, future=True)
+    engine = create_engine(database_url or Settings().database_url, future=True)
+    existing = set(inspect(engine).get_table_names())
+    generated: dict[str, int] = {}
+    ingested: dict[str, int] = {}
+    chunks = 0
     with engine.connect() as conn:
-        generated = dict(
-            conn.execute(
-                select(DocumentMetadataTable.document_type, func.count()).group_by(
-                    DocumentMetadataTable.document_type
-                )
-            ).all()
-        )
-        ingested = dict(
-            conn.execute(
-                select(IngestedContentTable.document_type, func.count())
-                .where(IngestedContentTable.status == "success")
-                .group_by(IngestedContentTable.document_type)
-            ).all()
-        )
-        try:
+        if DocumentMetadataTable.__tablename__ in existing:
+            generated = dict(
+                conn.execute(
+                    select(DocumentMetadataTable.document_type, func.count()).group_by(
+                        DocumentMetadataTable.document_type
+                    )
+                ).all()
+            )
+        if IngestedContentTable.__tablename__ in existing:
+            ingested = dict(
+                conn.execute(
+                    select(IngestedContentTable.document_type, func.count())
+                    .where(IngestedContentTable.status == "success")
+                    .group_by(IngestedContentTable.document_type)
+                ).all()
+            )
+        if "document_chunks" in existing:
             chunks = conn.execute(text("SELECT COUNT(*) FROM document_chunks")).scalar_one()
-        except ProgrammingError:  # table not created yet: nothing indexed
-            chunks = 0
+    engine.dispose()
     return CorpusCounts(generated=generated, ingested=ingested, indexed_chunks=chunks)
 
 
