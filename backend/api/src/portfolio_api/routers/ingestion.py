@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from portfolio_api.auth import verify_api_key
+from portfolio_api.rate_limit import limit_expensive
 
 router = APIRouter(prefix="/ingestion", tags=["ingestion"], dependencies=[Depends(verify_api_key)])
 
@@ -20,7 +21,7 @@ class IngestResponse(BaseModel):
     failed: int
 
 
-@router.post("/run", response_model=IngestResponse)
+@router.post("/run", response_model=IngestResponse, dependencies=[Depends(limit_expensive)])
 def run_ingestion_endpoint(request: IngestRequest) -> IngestResponse:
     from ingestion_pipeline.config import Settings
     from ingestion_pipeline.factory import ParserFactory

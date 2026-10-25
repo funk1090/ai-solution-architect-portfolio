@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from portfolio_api.auth import verify_api_key
+from portfolio_api.rate_limit import limit_expensive
 from portfolio_api.dependencies import get_embedding_model
 
 router = APIRouter(prefix="/assistant", tags=["assistant"], dependencies=[Depends(verify_api_key)])
@@ -76,7 +77,7 @@ def lookup_document_metadata(checksums: list[str]) -> dict[str, tuple[str, str]]
     return {r[0]: (r[1], r[2]) for r in rows}
 
 
-@router.post("/index", response_model=IndexResponse)
+@router.post("/index", response_model=IndexResponse, dependencies=[Depends(limit_expensive)])
 def index_documents() -> IndexResponse:
     from knowledge_assistant.config import Settings
     from knowledge_assistant.content_reader import PostgresIngestedContentReader
@@ -99,7 +100,7 @@ def index_documents() -> IndexResponse:
     )
 
 
-@router.post("/ask", response_model=AskResponse)
+@router.post("/ask", response_model=AskResponse, dependencies=[Depends(limit_expensive)])
 def ask_assistant(request: AskRequest) -> AskResponse:
     from knowledge_assistant.config import Settings
     from knowledge_assistant.llm import LLMBackendFactory

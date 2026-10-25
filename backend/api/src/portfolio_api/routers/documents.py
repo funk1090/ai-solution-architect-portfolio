@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from portfolio_api.auth import verify_api_key
+from portfolio_api.rate_limit import limit_expensive
 
 router = APIRouter(prefix="/documents", tags=["documents"], dependencies=[Depends(verify_api_key)])
 
@@ -19,7 +20,7 @@ class GenerateResponse(BaseModel):
     output_dir: str
 
 
-@router.post("/generate", response_model=GenerateResponse)
+@router.post("/generate", response_model=GenerateResponse, dependencies=[Depends(limit_expensive)])
 def generate_documents(request: GenerateRequest) -> GenerateResponse:
     from document_generator.config import Settings
     from document_generator.factory import GeneratorFactory

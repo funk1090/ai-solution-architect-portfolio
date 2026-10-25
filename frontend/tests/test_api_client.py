@@ -158,3 +158,25 @@ def test_list_rfps_parses_a_list_and_maps_errors() -> None:
 
     with pytest.raises(ApiUnauthorized):
         make_client(lambda r: httpx.Response(401)).list_rfps()
+
+
+def test_429_becomes_rate_limited_with_retry_after() -> None:
+    from portfolio_frontend.api_client import ApiRateLimited
+
+    client = make_client(lambda r: httpx.Response(429, headers={"Retry-After": "7"}))
+
+    with pytest.raises(ApiRateLimited) as exc_info:
+        client.ask("anything")
+
+    assert exc_info.value.retry_after == 7
+    assert "7 seconds" in str(exc_info.value)
+
+
+def test_429_without_retry_after_still_gives_a_friendly_message() -> None:
+    from portfolio_frontend.api_client import ApiRateLimited
+
+    with pytest.raises(ApiRateLimited) as exc_info:
+        make_client(lambda r: httpx.Response(429)).list_rfps()
+
+    assert exc_info.value.retry_after is None
+    assert "Try again shortly" in str(exc_info.value)

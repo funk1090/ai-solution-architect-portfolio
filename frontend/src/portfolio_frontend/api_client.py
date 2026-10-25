@@ -26,6 +26,27 @@ class ApiUnauthorized(ApiError):
     """The API rejected our key (HTTP 401)."""
 
 
+class ApiRateLimited(ApiError):
+    """The API throttled us (HTTP 429). `retry_after` is in seconds, if given."""
+
+    def __init__(self, message: str, retry_after: int | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
+
+
+def _raise_for_status(response: httpx.Response) -> None:
+    """Map HTTP error statuses to the typed exceptions pages understand."""
+    if response.status_code == 401:
+        raise ApiUnauthorized("The API rejected the API key (401). Check API_KEY.")
+    if response.status_code == 429:
+        header = response.headers.get("Retry-After", "")
+        retry_after = int(header) if header.isdigit() else None
+        wait = f" Try again in {retry_after} seconds." if retry_after else " Try again shortly."
+        raise ApiRateLimited(f"Rate limit reached.{wait}", retry_after)
+    if response.status_code >= 400:
+        raise ApiError(f"API error {response.status_code}: {response.text[:300]}")
+
+
 class DocumentTypeSummary(BaseModel):
     document_type: str
     generated: int
@@ -144,10 +165,7 @@ class ApiClient:
                 f"The API did not answer within {timeout:.0f}s."
             ) from exc
 
-        if response.status_code == 401:
-            raise ApiUnauthorized("The API rejected the API key (401). Check API_KEY.")
-        if response.status_code >= 400:
-            raise ApiError(f"API error {response.status_code}: {response.text[:300]}")
+        _raise_for_status(response)
         try:
             return model.model_validate(response.json())
         except (ValueError, ValidationError) as exc:
@@ -203,10 +221,7 @@ class ApiClient:
             ) from exc
         except httpx.TimeoutException as exc:
             raise ApiTimeout(f"The API did not answer within {timeout:.0f}s.") from exc
-        if response.status_code == 401:
-            raise ApiUnauthorized("The API rejected the API key (401). Check API_KEY.")
-        if response.status_code >= 400:
-            raise ApiError(f"API error {response.status_code}: {response.text[:300]}")
+        _raise_for_status(response)
         try:
             return [RfpInfo.model_validate(item) for item in response.json()]
         except (ValueError, ValidationError, TypeError) as exc:

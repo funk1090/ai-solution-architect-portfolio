@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 from portfolio_api.auth import verify_api_key
+from portfolio_api.rate_limit import limit_expensive
 
 router = APIRouter(prefix="/classifier", tags=["classifier"], dependencies=[Depends(verify_api_key)])
 
@@ -31,7 +32,7 @@ def classify_text(request: ClassifyRequest) -> ClassifyResponse:
     return ClassifyResponse(category=category)
 
 
-@router.post("/compare", response_model=CompareResponse)
+@router.post("/compare", response_model=CompareResponse, dependencies=[Depends(limit_expensive)])
 def compare_models() -> CompareResponse:
     """Reuses the exact comparison built for the 'compare' CLI command
     (Feature 0006) -- same functions, same methodology.

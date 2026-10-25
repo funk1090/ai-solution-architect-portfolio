@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from portfolio_api.auth import verify_api_key
+from portfolio_api.rate_limit import limit_expensive
 from portfolio_api.dependencies import get_embedding_model
 from portfolio_api.routers.assistant import lookup_document_metadata
 
@@ -121,7 +122,7 @@ def list_rfps(source_factory: Callable[[], Any] = Depends(get_rfp_source)) -> li
     ]
 
 
-@router.post("/check", response_model=CheckResponse)
+@router.post("/check", response_model=CheckResponse, dependencies=[Depends(limit_expensive)])
 def check_compliance(
     request: CheckRequest, source_factory: Callable[[], Any] = Depends(get_rfp_source)
 ) -> CheckResponse:
