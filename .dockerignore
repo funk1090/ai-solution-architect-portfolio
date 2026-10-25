@@ -1,0 +1,16 @@
+# Keep the build context small and free of secrets (Feature 0010).
+.git
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/*.zip
+**/.env
+**/.env.*
+**/tests
+backend/datasets
+docs
+infrastructure
+notebooks
+experiments
+books
